@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+**/dist
+coverage
+.git
+.env
+.env.*
+!.env.example
+.codex-doc-review
+.codex-ui-qa
+*.log

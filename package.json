@@ -1,0 +1,38 @@
+{
+  "name": "lorekeeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sistema para organizar universos narrativos y su continuidad.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "build:packages": "npm run build -w @lorekeeper/shared && npm run build -w @lorekeeper/validation",
+    "dev": "npm run prisma:generate && npm run build:packages && dotenv -- concurrently -k -n api,web -c blue,magenta \"npm run dev -w @lorekeeper/api\" \"npm run dev -w @lorekeeper/web\"",
+    "build": "npm run prisma:generate && npm run build:packages && npm run build -w @lorekeeper/api && npm run build -w @lorekeeper/web",
+    "test": "npm run prisma:generate && npm run build:packages && npm run test --workspaces --if-present",
+    "typecheck": "npm run prisma:generate && npm run build:packages && npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --max-warnings=0",
+    "prisma:generate": "npm run prisma:generate -w @lorekeeper/api",
+    "prisma:validate": "dotenv -- npm run prisma:validate -w @lorekeeper/api",
+    "db:migrate": "dotenv -- npm run prisma:migrate -w @lorekeeper/api",
+    "db:deploy": "dotenv -- npm run prisma:deploy -w @lorekeeper/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "concurrently": "^9.2.1",
+    "dotenv-cli": "^10.0.0",
+    "eslint": "^9.35.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0"
+  }
+}
