@@ -13,6 +13,14 @@ export const errorHandler = (
 ): void => {
   const correlationId = String(response.locals.correlationId ?? "unknown");
 
+  if (error instanceof Error && "type" in error &&
+    (error.type === "entity.parse.failed" || error.type === "entity.too.large")) {
+    response.status(error.type === "entity.too.large" ? 413 : 400).json({ error: {
+      code: "INVALID_REQUEST_BODY", message: "El cuerpo de la solicitud no es válido", correlationId,
+    } });
+    return;
+  }
+
   if (error instanceof ZodError) {
     const details: ApiFieldError[] = error.issues.map((issue) => ({
       field: issue.path.join(".") || "request",
@@ -46,7 +54,8 @@ export const errorHandler = (
   }
 
   if (process.env.NODE_ENV !== "test") {
-    console.error(`[${correlationId}] Error inesperado`, error);
+    // Do not log error objects: database/parser errors may contain credentials or bodies.
+    console.error(`[${correlationId}] Error inesperado`);
   }
 
   response.status(500).json({
@@ -57,4 +66,3 @@ export const errorHandler = (
     },
   });
 };
-

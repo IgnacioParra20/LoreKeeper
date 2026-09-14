@@ -16,6 +16,33 @@
 
 * { box-sizing: border-box; }
 
+.auth-page { width: min(1100px, calc(100% - 48px)); margin: 90px auto; display: grid; grid-template-columns: 1fr 440px; gap: 80px; align-items: center; }
+.eyebrow { color: var(--primary); letter-spacing: .16em; font-size: 12px; font-weight: 700; }
+.auth-intro h1 { font-family: Georgia, serif; font-size: clamp(40px, 5vw, 64px); line-height: 1.08; letter-spacing: -.035em; margin: 22px 0; }
+.auth-intro > p:last-child { color: var(--muted); max-width: 390px; line-height: 1.8; }
+.auth-card { border: 1px solid var(--border); border-radius: 12px; padding: 36px; background: #fff; }
+.auth-card h2 { margin: 0; font-family: Georgia, serif; font-size: 28px; }
+.auth-card > p { color: var(--muted); line-height: 1.6; font-size: 14px; }
+.auth-card form { display: grid; gap: 10px; margin-top: 28px; }
+.auth-card label { font-size: 14px; font-weight: 650; }
+.auth-card input { width: 100%; min-height: 48px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; color: var(--ink); background: white; }
+.auth-card label:not(:first-child) { margin-top: 10px; }
+.auth-card small { color: var(--muted); line-height: 1.5; }
+.auth-card form .button { margin-top: 14px; }
+.auth-switch { display: block; margin: 24px auto 0; background: none; border: 0; color: var(--primary); font-size: 14px; line-height: 1.5; }
+.account-bar { width: min(1180px, calc(100% - 48px)); margin: 20px auto 0; display: flex; justify-content: flex-end; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.account-bar span { overflow-wrap: anywhere; min-width: 0; }
+.account-bar button { flex-shrink: 0; }
+.session-error { margin: 24px; color: var(--danger); }
+@media (max-width: 760px) {
+  .auth-page { grid-template-columns: 1fr; gap: 24px; margin: 32px auto; width: calc(100% - 32px); }
+  .auth-intro h1 { font-size: 40px; margin: 12px 0; }
+  .auth-intro br { display: none; }
+  .auth-intro > p:last-child { margin-bottom: 0; }
+  .auth-card { padding: 26px 22px; }
+  .account-bar { width: calc(100% - 32px); align-items: flex-start; }
+}
+
 body {
   margin: 0;
   min-width: 320px;

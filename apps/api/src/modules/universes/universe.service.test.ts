@@ -7,7 +7,7 @@ describe("UniverseService", () => {
   it("crea universos activos por defecto", async () => {
     const service = new UniverseService(new InMemoryUniverseRepository());
 
-    const universe = await service.create({ name: "Archivo Lunar" });
+    const universe = await service.create({ name: "Archivo Lunar" }, "owner-a");
 
     expect(universe.status).toBe("ACTIVE");
     expect(universe.description).toBeNull();
@@ -17,7 +17,7 @@ describe("UniverseService", () => {
     const service = new UniverseService(new InMemoryUniverseRepository());
 
     await expect(
-      service.getById("9a2bdf8b-d5f0-45b9-8a65-14fa14893122"),
+      service.getById("9a2bdf8b-d5f0-45b9-8a65-14fa14893122", "owner-a"),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: "UNIVERSE_NOT_FOUND",

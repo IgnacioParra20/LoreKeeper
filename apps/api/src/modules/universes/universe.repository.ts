@@ -1,6 +1,7 @@
 import type { Universe, UniverseStatus } from "@lorekeeper/shared";
 
 export interface CreateUniverseData {
+  ownerId: string;
   name: string;
   description: string | null;
   status: UniverseStatus;
@@ -14,9 +15,8 @@ export interface UpdateUniverseData {
 
 export interface UniverseRepository {
   create(data: CreateUniverseData): Promise<Universe>;
-  findMany(): Promise<Universe[]>;
-  findById(id: string): Promise<Universe | null>;
-  update(id: string, data: UpdateUniverseData): Promise<Universe>;
-  delete(id: string): Promise<void>;
+  findMany(ownerId: string): Promise<Universe[]>;
+  findById(id: string, ownerId: string): Promise<Universe | null>;
+  update(id: string, ownerId: string, data: UpdateUniverseData): Promise<Universe | null>;
+  delete(id: string, ownerId: string): Promise<boolean>;
 }
-

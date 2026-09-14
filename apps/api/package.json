@@ -7,17 +7,20 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers=1 --exclude src/auth.postgres.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "assign-owner": "tsx src/scripts/assign-ownership.ts"
   },
   "dependencies": {
     "@lorekeeper/shared": "*",
     "@lorekeeper/validation": "*",
     "@prisma/client": "6.12.0",
+    "argon2": "^0.45.1",
+    "cookie": "^1.1.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "helmet": "^8.1.0",

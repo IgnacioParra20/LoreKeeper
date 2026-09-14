@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-lorekeeper}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lorekeeper_dev}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - lorekeeper_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,12 +27,18 @@ services:
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-lorekeeper}:${POSTGRES_PASSWORD:-lorekeeper_dev}@postgres:5432/${POSTGRES_DB:-lorekeeper}?schema=public
-      CORS_ORIGIN: http://localhost:${WEB_PORT:-5173}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SESSION_ABSOLUTE_HOURS: ${SESSION_ABSOLUTE_HOURS:-168}
+      SESSION_IDLE_HOURS: ${SESSION_IDLE_HOURS:-24}
+      AUTH_REGISTER_LIMIT: ${AUTH_REGISTER_LIMIT:-5}
+      AUTH_LOGIN_IP_LIMIT: ${AUTH_LOGIN_IP_LIMIT:-20}
+      AUTH_LOGIN_EMAIL_LIMIT: ${AUTH_LOGIN_EMAIL_LIMIT:-10}
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "${PORT:-3001}:3001"
+      - "127.0.0.1:${PORT:-3001}:3001"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
@@ -48,8 +54,7 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "${WEB_PORT:-5173}:80"
+      - "127.0.0.1:${WEB_PORT:-5173}:80"
 
 volumes:
   lorekeeper_postgres_data:
-

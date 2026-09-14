@@ -21,7 +21,10 @@
     "prisma:generate": "npm run prisma:generate -w @lorekeeper/api",
     "prisma:validate": "dotenv -- npm run prisma:validate -w @lorekeeper/api",
     "db:migrate": "dotenv -- npm run prisma:migrate -w @lorekeeper/api",
-    "db:deploy": "dotenv -- npm run prisma:deploy -w @lorekeeper/api"
+    "db:deploy": "dotenv -- npm run prisma:deploy -w @lorekeeper/api",
+    "db:expand": "dotenv -- node scripts/migrate-expand.mjs",
+    "db:assign-owner": "dotenv -- npm run assign-owner -w @lorekeeper/api --",
+    "test:integration": "dotenv -- node scripts/test-integration.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

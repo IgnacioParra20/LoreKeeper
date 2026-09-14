@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Universe } from "@lorekeeper/shared";
 import type { CreateUniverseInput } from "@lorekeeper/validation";
 
-import { ApiError, createUniverse, getUniverses } from "../api/client";
+import { ApiError, createUniverse, getUniverses, isAborted } from "../api/client";
 
 const messageFromError = (error: unknown): string => {
   if (error instanceof ApiError) {
@@ -15,6 +15,7 @@ const messageFromError = (error: unknown): string => {
 };
 
 export const useUniverses = () => {
+  const lifecycle = useRef<AbortController | null>(null);
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -24,9 +25,10 @@ export const useUniverses = () => {
     setIsLoading(true);
     setError(null);
     try {
-      setUniverses(await getUniverses(signal));
+      const values = await getUniverses(signal);
+      if (!signal?.aborted) setUniverses(values);
     } catch (loadError) {
-      if (!(loadError instanceof DOMException && loadError.name === "AbortError")) {
+      if (!isAborted(loadError)) {
         setError(messageFromError(loadError));
       }
     } finally {
@@ -36,6 +38,7 @@ export const useUniverses = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    lifecycle.current = controller;
     void load(controller.signal);
     return () => controller.abort();
   }, [load]);
@@ -44,11 +47,12 @@ export const useUniverses = () => {
     setIsCreating(true);
     setError(null);
     try {
-      const universe = await createUniverse(input);
+      const universe = await createUniverse(input, lifecycle.current?.signal);
+      if (lifecycle.current?.signal.aborted) return null;
       setUniverses((current) => [universe, ...current]);
       return universe;
     } catch (createError) {
-      setError(messageFromError(createError));
+      if (!isAborted(createError)) setError(messageFromError(createError));
       return null;
     } finally {
       setIsCreating(false);
@@ -57,4 +61,3 @@ export const useUniverses = () => {
 
   return { universes, isLoading, isCreating, error, create, reload: load };
 };
-

@@ -10,42 +10,39 @@ import type { UniverseRepository, UpdateUniverseData } from "./universe.reposito
 export class UniverseService {
   public constructor(private readonly repository: UniverseRepository) {}
 
-  public create(input: CreateUniverseInput): Promise<Universe> {
+  public create(input: CreateUniverseInput, ownerId: string): Promise<Universe> {
     return this.repository.create({
+      ownerId,
       name: input.name,
       description: input.description ?? null,
       status: input.status ?? "ACTIVE",
     });
   }
 
-  public list(): Promise<Universe[]> {
-    return this.repository.findMany();
+  public list(ownerId: string): Promise<Universe[]> {
+    return this.repository.findMany(ownerId);
   }
 
-  public async getById(id: string): Promise<Universe> {
-    const universe = await this.repository.findById(id);
+  public async getById(id: string, ownerId: string): Promise<Universe> {
+    const universe = await this.repository.findById(id, ownerId);
     if (!universe) {
       throw new AppError(404, "UNIVERSE_NOT_FOUND", "Universe not found");
     }
     return universe;
   }
 
-  public async update(id: string, input: UpdateUniverseInput): Promise<Universe> {
-    await this.ensureExists(id);
+  public async update(id: string, input: UpdateUniverseInput, ownerId: string): Promise<Universe> {
     const data: UpdateUniverseData = {};
     if (input.name !== undefined) data.name = input.name;
     if (input.description !== undefined) data.description = input.description;
     if (input.status !== undefined) data.status = input.status;
-    return this.repository.update(id, data);
+    const universe = await this.repository.update(id, ownerId, data);
+    if (!universe) throw new AppError(404, "UNIVERSE_NOT_FOUND", "Universe not found");
+    return universe;
   }
 
-  public async delete(id: string): Promise<void> {
-    await this.ensureExists(id);
-    await this.repository.delete(id);
-  }
-
-  private async ensureExists(id: string): Promise<void> {
-    if (!(await this.repository.findById(id))) {
+  public async delete(id: string, ownerId: string): Promise<void> {
+    if (!(await this.repository.delete(id, ownerId))) {
       throw new AppError(404, "UNIVERSE_NOT_FOUND", "Universe not found");
     }
   }

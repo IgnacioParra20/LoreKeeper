@@ -1,4 +1,4 @@
-export const openApiSpec = {
+const universeSpec = {
   openapi: "3.1.0",
   info: {
     title: "LoreKeeper API",
@@ -182,3 +182,55 @@ export const openApiSpec = {
   },
 } as const;
 
+const jsonSchema = (schema: object) => ({ "application/json": { schema } });
+const envelope = (schema: object) => ({ type: "object", required: ["data"], properties: { data: schema } });
+const userSchema = {
+  type: "object", additionalProperties: false, required: ["id", "email", "status", "createdAt", "updatedAt"],
+  properties: { id: { type: "string", format: "uuid" }, email: { type: "string", format: "email" }, status: { type: "string", enum: ["ACTIVE", "DISABLED"] }, createdAt: { type: "string", format: "date-time" }, updatedAt: { type: "string", format: "date-time" } },
+};
+const csrfParameter = { in: "header", name: "X-CSRF-Token", required: true, schema: { type: "string" }, description: "Token obtenido al autenticar o desde GET /api/auth/csrf" };
+const authErrors = {
+  "400": { $ref: "#/components/responses/ValidationError" },
+  "401": { description: "Sesión inválida o credenciales incorrectas", content: jsonSchema({ $ref: "#/components/schemas/Error" }) },
+  "403": { description: "Origin o CSRF rechazado antes de ejecutar la operación", content: jsonSchema({ $ref: "#/components/schemas/Error" }) },
+  "415": { description: "Se requiere application/json" },
+  "429": { description: "Límite de acceso alcanzado", headers: { "Retry-After": { schema: { type: "integer" } } } },
+};
+const credentialsOperation = (registration: boolean) => ({
+  tags: ["Auth"], security: [], summary: registration ? "Registra una cuenta e inicia sesión" : "Inicia sesión y reemplaza la sesión actual",
+  description: "Requiere Origin exacto permitido. Set-Cookie emite una sesión HttpOnly. El email se normaliza a minúsculas. Registro no verifica el buzón.",
+  requestBody: { required: true, content: jsonSchema({ type: "object", additionalProperties: false, required: ["email", "password"], properties: { email: { type: "string", format: "email", maxLength: 254 }, password: { type: "string", minLength: registration ? 15 : 1, maxLength: 128, writeOnly: true } } }) },
+  responses: { ...authErrors,
+    ...(registration ? { "409": { description: "REGISTRATION_UNAVAILABLE; dirección ya registrada" } } : {}),
+    [registration ? "201" : "200"]: { description: "Autenticado", headers: { "Set-Cookie": { schema: { type: "string" } } }, content: jsonSchema(envelope({ type: "object", required: ["user", "csrfToken"], properties: { user: userSchema, csrfToken: { type: "string" } } })) },
+  },
+});
+const securePaths = Object.fromEntries(Object.entries(universeSpec.paths).map(([path, item]) => [path,
+  Object.fromEntries(Object.entries(item).map(([method, operation]) => {
+    if (method === "parameters") return [method, operation];
+    const protectedOperation = operation as { responses: object };
+    return [method, { ...operation,
+      ...(path === "/health" ? { security: [] } : { description: "Solo universos del propietario autenticado. Recursos ajenos e inexistentes devuelven 404.",
+        ...(["post", "patch", "delete"].includes(method) ? { parameters: [csrfParameter] } : {}),
+        responses: { ...authErrors, ...protectedOperation.responses },
+      }),
+    }];
+  })),
+]));
+export const openApiSpec = {
+  ...universeSpec,
+  info: { ...universeSpec.info, version: "0.2.0", description: "Usuarios, sesiones y universos privados. En HTTP local la cookie es lorekeeper_session; en HTTPS es __Host-lorekeeper_session." },
+  security: [{ sessionCookie: [] }],
+  tags: [...universeSpec.tags, { name: "Auth", description: "Registro y sesiones" }],
+  paths: {
+    ...securePaths,
+    "/api/auth/register": { post: credentialsOperation(true) },
+    "/api/auth/login": { post: credentialsOperation(false) },
+    "/api/auth/me": { get: { tags: ["Auth"], summary: "Usuario actual", responses: { ...authErrors, "200": { description: "Usuario público, sin hashes", content: jsonSchema(envelope(userSchema)) } } } },
+    "/api/auth/csrf": { get: { tags: ["Auth"], summary: "Renueva el token CSRF de esta sesión", responses: { ...authErrors, "200": { description: "Token nuevo; el anterior queda invalidado", content: jsonSchema(envelope({ type: "object", required: ["csrfToken"], properties: { csrfToken: { type: "string" } } })) } } } },
+    "/api/auth/logout": { post: { tags: ["Auth"], summary: "Revoca la sesión actual y elimina la cookie", parameters: [csrfParameter], responses: { ...authErrors, "204": { description: "Sesión cerrada" } } } },
+  },
+  components: { ...universeSpec.components, schemas: { ...universeSpec.components.schemas, PublicUser: userSchema },
+    securitySchemes: { sessionCookie: { type: "apiKey", in: "cookie", name: "lorekeeper_session", description: "Cookie HttpOnly; en HTTPS su nombre es __Host-lorekeeper_session. El navegador la envía automáticamente." } },
+  },
+};

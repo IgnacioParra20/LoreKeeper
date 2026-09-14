@@ -15,9 +15,16 @@ import type { UniverseRepository } from "./modules/universes/universe.repository
 import { createUniverseRouter } from "./modules/universes/universe.routes.js";
 import { UniverseService } from "./modules/universes/universe.service.js";
 import { openApiSpec } from "./openapi/spec.js";
+import type { IdentityRepository } from "./modules/users/user.repository.js";
+import { AuthService } from "./modules/auth/auth.service.js";
+import { authDefaults, createAuthHttp, guardBrowserWrites, type AuthOptions } from "./modules/auth/auth.http.js";
 
 interface AppDependencies {
   universeRepository: UniverseRepository;
+  identityRepository: IdentityRepository;
+  auth?: Partial<AuthOptions>;
+  sessionAbsoluteMs?: number;
+  sessionIdleMs?: number;
   checkDatabase?: DatabaseHealthCheck;
   corsOrigin?: string;
 }
@@ -26,21 +33,24 @@ export const createApp = (dependencies: AppDependencies): Express => {
   const app = express();
   const universeService = new UniverseService(dependencies.universeRepository);
   const universeController = new UniverseController(universeService);
+  const authOptions = { ...authDefaults, origin: dependencies.corsOrigin ?? authDefaults.origin, ...dependencies.auth };
+  const auth = createAuthHttp(new AuthService(dependencies.identityRepository, dependencies.sessionAbsoluteMs, dependencies.sessionIdleMs), authOptions);
 
   app.disable("x-powered-by");
   app.use(helmet({ contentSecurityPolicy: false }));
-  app.use(cors({ origin: dependencies.corsOrigin ?? true }));
-  app.use(express.json({ limit: "1mb" }));
   app.use(correlationId);
+  app.use(cors({ origin: authOptions.origin, credentials: true }));
+  app.use("/api", guardBrowserWrites(authOptions.origin));
+  app.use(express.json({ limit: "16kb" }));
 
   app.use("/health", createHealthRouter(dependencies.checkDatabase));
   app.get("/api/docs.json", (_request, response) => response.json(openApiSpec));
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
-  app.use("/api/universes", createUniverseRouter(universeController));
+  app.use("/api/auth", auth.router);
+  app.use("/api/universes", auth.privateResponse, auth.authenticate, auth.csrf, createUniverseRouter(universeController));
 
   app.use(notFound);
   app.use(errorHandler);
 
   return app;
 };
-
