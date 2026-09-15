@@ -1,5 +1,5 @@
-import type { ApiErrorResponse, ApiSuccess, AuthResult, PublicUser, Universe } from "@lorekeeper/shared";
-import type { CreateUniverseInput, Credentials } from "@lorekeeper/validation";
+import type { ApiErrorResponse, ApiSuccess, AuthResult, Character, PublicUser, Universe } from "@lorekeeper/shared";
+import type { CreateCharacterInput, CreateUniverseInput, Credentials, UpdateCharacterInput } from "@lorekeeper/validation";
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -92,4 +92,24 @@ export const createUniverse = async (input: CreateUniverseInput, signal?: AbortS
     ...(signal ? { signal } : {}),
   });
   return response.data;
+};
+export const getUniverse = async (id: string, signal?: AbortSignal) => {
+  const result = await request<ApiSuccess<Universe>>(`/api/universes/${id}`, signal ? { signal } : {});
+  return result.data;
+};
+const charactersPath = (universeId: string) => `/api/universes/${universeId}/characters`;
+export const getCharacters = async (universeId: string, signal?: AbortSignal) => {
+  const result = await request<ApiSuccess<Character[]>>(charactersPath(universeId), signal ? { signal } : {});
+  return result.data;
+};
+export const createCharacter = async (universeId: string, input: CreateCharacterInput, signal?: AbortSignal) => {
+  const result = await request<ApiSuccess<Character>>(charactersPath(universeId), { method: "POST", body: JSON.stringify(input), ...(signal ? { signal } : {}) });
+  return result.data;
+};
+export const updateCharacter = async (universeId: string, characterId: string, input: UpdateCharacterInput, signal?: AbortSignal) => {
+  const result = await request<ApiSuccess<Character>>(`${charactersPath(universeId)}/${characterId}`, { method: "PATCH", body: JSON.stringify(input), ...(signal ? { signal } : {}) });
+  return result.data;
+};
+export const deleteCharacter = async (universeId: string, characterId: string, signal?: AbortSignal) => {
+  await request<void>(`${charactersPath(universeId)}/${characterId}`, { method: "DELETE", ...(signal ? { signal } : {}) });
 };

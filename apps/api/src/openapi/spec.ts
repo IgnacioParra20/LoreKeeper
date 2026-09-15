@@ -98,9 +98,10 @@ const universeSpec = {
       },
       delete: {
         tags: ["Universes"],
-        summary: "Elimina físicamente un universo vacío en esta primera fase",
+        summary: "Elimina un universo sin personajes",
         responses: {
           "204": { description: "Universo eliminado" },
+          "409": { description: "UNIVERSE_HAS_CHARACTERS; conserva el universo y sus personajes" },
           "404": { $ref: "#/components/responses/NotFound" },
         },
       },
@@ -205,6 +206,18 @@ const credentialsOperation = (registration: boolean) => ({
     [registration ? "201" : "200"]: { description: "Autenticado", headers: { "Set-Cookie": { schema: { type: "string" } } }, content: jsonSchema(envelope({ type: "object", required: ["user", "csrfToken"], properties: { user: userSchema, csrfToken: { type: "string" } } })) },
   },
 });
+const characterSchema = { type: "object", additionalProperties: false,
+  required: ["id", "universeId", "name", "role", "description", "createdAt", "updatedAt"],
+  properties: { id: { type: "string", format: "uuid" }, universeId: { type: "string", format: "uuid" },
+    name: { type: "string", maxLength: 120 }, role: { type: ["string", "null"], maxLength: 120 },
+    description: { type: ["string", "null"], maxLength: 5000 },
+    createdAt: { type: "string", format: "date-time" }, updatedAt: { type: "string", format: "date-time" } },
+};
+const characterInput = { type: "object", additionalProperties: false, required: ["name"],
+  properties: { name: { type: "string", minLength: 1, maxLength: 120 }, role: { type: ["string", "null"], maxLength: 120 }, description: { type: ["string", "null"], maxLength: 5000 } } };
+const characterParams = [{ in: "path", name: "universeId", required: true, schema: { type: "string", format: "uuid" } }];
+const characterIdParameter = { in: "path", name: "characterId", required: true, schema: { type: "string", format: "uuid" } };
+const character404 = { description: "Personaje o universo ajeno/inexistente", content: jsonSchema({ $ref: "#/components/schemas/Error" }) };
 const securePaths = Object.fromEntries(Object.entries(universeSpec.paths).map(([path, item]) => [path,
   Object.fromEntries(Object.entries(item).map(([method, operation]) => {
     if (method === "parameters") return [method, operation];
@@ -219,9 +232,9 @@ const securePaths = Object.fromEntries(Object.entries(universeSpec.paths).map(([
 ]));
 export const openApiSpec = {
   ...universeSpec,
-  info: { ...universeSpec.info, version: "0.2.0", description: "Usuarios, sesiones y universos privados. En HTTP local la cookie es lorekeeper_session; en HTTPS es __Host-lorekeeper_session." },
+  info: { ...universeSpec.info, version: "0.3.0", description: "Usuarios, sesiones, universos privados y personajes. En HTTP local la cookie es lorekeeper_session; en HTTPS es __Host-lorekeeper_session." },
   security: [{ sessionCookie: [] }],
-  tags: [...universeSpec.tags, { name: "Auth", description: "Registro y sesiones" }],
+  tags: [...universeSpec.tags, { name: "Auth", description: "Registro y sesiones" }, { name: "Characters", description: "Personajes de un universo propio" }],
   paths: {
     ...securePaths,
     "/api/auth/register": { post: credentialsOperation(true) },
@@ -229,8 +242,19 @@ export const openApiSpec = {
     "/api/auth/me": { get: { tags: ["Auth"], summary: "Usuario actual", responses: { ...authErrors, "200": { description: "Usuario público, sin hashes", content: jsonSchema(envelope(userSchema)) } } } },
     "/api/auth/csrf": { get: { tags: ["Auth"], summary: "Renueva el token CSRF de esta sesión", responses: { ...authErrors, "200": { description: "Token nuevo; el anterior queda invalidado", content: jsonSchema(envelope({ type: "object", required: ["csrfToken"], properties: { csrfToken: { type: "string" } } })) } } } },
     "/api/auth/logout": { post: { tags: ["Auth"], summary: "Revoca la sesión actual y elimina la cookie", parameters: [csrfParameter], responses: { ...authErrors, "204": { description: "Sesión cerrada" } } } },
+    "/api/universes/{universeId}/characters": {
+      parameters: characterParams,
+      get: { tags: ["Characters"], summary: "Lista los personajes de un universo propio", responses: { ...authErrors, "200": { description: "Personajes", content: jsonSchema(envelope({ type: "array", items: { $ref: "#/components/schemas/Character" } })) }, "404": character404 } },
+      post: { tags: ["Characters"], summary: "Crea un personaje", parameters: [csrfParameter], requestBody: { required: true, content: jsonSchema(characterInput) }, responses: { ...authErrors, "201": { description: "Personaje creado", content: jsonSchema(envelope({ $ref: "#/components/schemas/Character" })) }, "404": character404 } },
+    },
+    "/api/universes/{universeId}/characters/{characterId}": {
+      parameters: [...characterParams, characterIdParameter],
+      get: { tags: ["Characters"], summary: "Consulta un personaje", responses: { ...authErrors, "200": { description: "Personaje", content: jsonSchema(envelope({ $ref: "#/components/schemas/Character" })) }, "404": character404 } },
+      patch: { tags: ["Characters"], summary: "Edita un personaje", parameters: [csrfParameter], requestBody: { required: true, content: jsonSchema({ ...characterInput, required: [], minProperties: 1 }) }, responses: { ...authErrors, "200": { description: "Personaje actualizado", content: jsonSchema(envelope({ $ref: "#/components/schemas/Character" })) }, "404": character404 } },
+      delete: { tags: ["Characters"], summary: "Elimina un personaje", parameters: [csrfParameter], responses: { ...authErrors, "204": { description: "Personaje eliminado" }, "404": character404 } },
+    },
   },
-  components: { ...universeSpec.components, schemas: { ...universeSpec.components.schemas, PublicUser: userSchema },
+  components: { ...universeSpec.components, schemas: { ...universeSpec.components.schemas, PublicUser: userSchema, Character: characterSchema },
     securitySchemes: { sessionCookie: { type: "apiKey", in: "cookie", name: "lorekeeper_session", description: "Cookie HttpOnly; en HTTPS su nombre es __Host-lorekeeper_session. El navegador la envía automáticamente." } },
   },
 };

@@ -4,7 +4,7 @@ LoreKeeper es un sistema de información para escritores, guionistas, autores de
 
 ## Estado actual
 
-La versión funcional actual implementa la base técnica, Universe y autenticación con propiedad:
+La versión funcional actual implementa la base técnica, autenticación y la primera parte del contenido narrativo:
 
 - monorepo con npm workspaces;
 - cliente React + TypeScript + Vite;
@@ -17,8 +17,9 @@ La versión funcional actual implementa la base técnica, Universe y autenticaci
 - registro y login con email/contraseña, Argon2id y sesiones revocables en PostgreSQL;
 - cookies HttpOnly, CSRF, vencimiento y límites de acceso;
 - universos privados con ownerId obligatorio y autorización en todas las consultas.
+- detalle de universo y personajes con ficha, listado, edición y borrado.
 
-Todavía no incluye verificación de email, recuperación de contraseña, obras, personajes, timeline, canon ni Continuity Engine. La cuenta local no verifica el control del buzón; el registro público requiere completar primero los flujos de correo y recuperación.
+Todavía no incluye verificación de email, recuperación de contraseña, obras, lugares, eventos, timeline, canon ni Continuity Engine. La cuenta local no verifica el control del buzón; el registro público requiere completar primero los flujos de correo y recuperación.
 
 ## Stack
 
@@ -36,8 +37,8 @@ Todavía no incluye verificación de email, recuperación de contraseña, obras,
 
 ```text
 apps/
-  api/          API, módulo Universe y Prisma
-  web/          interfaz inicial de universos
+  api/          API, módulos Auth, Universe y Character, Prisma
+  web/          interfaz de universos y personajes
 packages/
   shared/       tipos estables compartidos
   validation/   esquemas Zod y tipos de entrada
@@ -71,6 +72,8 @@ Si la base contiene universos de la versión anterior, sigue primero [la migraci
 La aplicación web queda en `http://localhost:5173` y la API en `http://localhost:3001`. El servidor de Vite redirige `/api` a la API durante el desarrollo.
 
 Abre la web y crea una cuenta con email y una contraseña de 15 a 128 caracteres. Registro y login inician una sesión; al recargar se recupera desde PostgreSQL. Cerrar sesión la revoca. Los universos se crean siempre para la identidad autenticada y no aceptan ownerId desde el navegador.
+
+Desde «Tus universos», selecciona «Abrir universo» para crear, consultar, editar y eliminar sus personajes. La ficha inicial admite nombre, rol y descripción. La API impide borrar físicamente un universo que todavía contenga personajes.
 
 ## Ejecución completa con Docker
 
@@ -136,12 +139,14 @@ npm run test:integration # Prisma/PostgreSQL real; requiere TEST_DATABASE_URL
 | GET | `/api/universes/:id` | Consultar universo |
 | PATCH | `/api/universes/:id` | Actualizar universo |
 | DELETE | `/api/universes/:id` | Eliminar universo en esta fase |
+| GET/POST | `/api/universes/:universeId/characters` | Listar y crear personajes |
+| GET/PATCH/DELETE | `/api/universes/:universeId/characters/:characterId` | Consultar, editar y eliminar personaje |
 
 Swagger UI está disponible en `http://localhost:3001/api/docs` y el documento JSON en `/api/docs.json`.
 
 Las rutas de universos requieren la cookie de sesión. Todas las escrituras exigen un Origin idéntico a CORS_ORIGIN; cuando hay cuerpo, application/json. Las escrituras autenticadas también requieren X-CSRF-Token. Registro/login entregan ese token y GET /api/auth/csrf permite renovarlo. El cliente web lo conserva solo en memoria y reintenta una vez si el middleware rechaza un token CSRF obsoleto antes de ejecutar la operación.
 
-Sin sesión se responde 401. Origen o CSRF inválidos producen 403. Un universo ajeno devuelve el mismo 404 que uno inexistente. Las respuestas privadas llevan Cache-Control: no-store. Swagger debe usarse con el origen permitido (el proxy web también expone `/api/docs`); las cookies HttpOnly las administra el navegador.
+Sin sesión se responde 401. Origen o CSRF inválidos producen 403. Un universo o personaje ajeno devuelve el mismo 404 que uno inexistente. Las respuestas privadas llevan Cache-Control: no-store. Swagger debe usarse con el origen permitido (el proxy web también expone `/api/docs`); las cookies HttpOnly las administra el navegador.
 
 Los errores siguen este contrato:
 
@@ -163,15 +168,15 @@ Para probar la persistencia real, crea la base separada con `docker compose exec
 
 Los respaldos y credenciales de bootstrap se guardan en `.local/`, ignorada por Git y Docker. El bootstrap genera una contraseña aleatoria para una cuenta de prueba nueva, sin enviarla por correo y sin sobrescribir credenciales existentes.
 
-El borrado actual es físico. Antes de que universos contengan obras o referencias históricas, la operación normal migrará a archivado y la eliminación irreversible requerirá confirmación reforzada.
+El borrado actual es físico solo para universos sin personajes. Si un universo contiene personajes, devuelve 409 `UNIVERSE_HAS_CHARACTERS` y conserva todos sus datos. Más adelante la operación normal migrará a archivado y la eliminación irreversible requerirá confirmación reforzada.
 
 Consulta [la arquitectura](docs/architecture/README.md) para el flujo de dependencias y la evolución del modelo.
 
 ## Roadmap resumido
 
 1. Verificación de email y recuperación de cuentas antes de abrir el registro al público.
-2. Works y relaciones entre obras.
-3. Characters globales y participaciones por obra.
+2. Characters globales del universo (ficha y CRUD inicial implementados); ampliar atributos y búsqueda.
+3. Works, relaciones entre obras y participaciones de personajes por obra.
 4. Arcs y Chapters.
 5. Events y timeline global.
 6. Reglas, canon y excepciones.

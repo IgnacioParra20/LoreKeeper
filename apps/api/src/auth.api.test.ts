@@ -3,15 +3,20 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
 import { InMemoryIdentityRepository } from "./test/in-memory-identity.repository.js";
 import { InMemoryUniverseRepository } from "./test/in-memory-universe.repository.js";
+import { InMemoryCharacterRepository } from "./test/in-memory-character.repository.js";
 
 const origin = "http://localhost:5173";
 const password = "An adequate test passphrase!";
 describe("Auth and ownership HTTP", () => {
+  const repositories = () => {
+    const universeRepository = new InMemoryUniverseRepository();
+    return { universeRepository, characterRepository: new InMemoryCharacterRepository(universeRepository) };
+  };
   let identities: InMemoryIdentityRepository;
   let app: ReturnType<typeof createApp>;
   beforeEach(() => {
     identities = new InMemoryIdentityRepository();
-    app = createApp({ identityRepository: identities, universeRepository: new InMemoryUniverseRepository() });
+    app = createApp({ identityRepository: identities, ...repositories() });
   });
   const register = async (email = "a@example.test") => {
     const client = request.agent(app).set("Origin", origin);
@@ -93,14 +98,14 @@ describe("Auth and ownership HTTP", () => {
     expect(result.status).toBe(401);
   });
   it("limits login and sends Retry-After", async () => {
-    app = createApp({ identityRepository: identities, universeRepository: new InMemoryUniverseRepository(), auth: { loginEmailLimit: 1 } });
+    app = createApp({ identityRepository: identities, ...repositories(), auth: { loginEmailLimit: 1 } });
     const client = request(app);
     await client.post("/api/auth/login").set("Origin", origin).send({ email: "absent@example.test", password });
     const response = await client.post("/api/auth/login").set("Origin", origin).send({ email: "ABSENT@example.test", password });
     expect(response.status).toBe(429); expect(Number(response.headers["retry-after"])).toBeGreaterThan(0);
   });
   it("emits Secure host-prefixed cookies when configured", async () => {
-    app = createApp({ identityRepository: identities, universeRepository: new InMemoryUniverseRepository(), auth: { secureCookies: true } });
+    app = createApp({ identityRepository: identities, ...repositories(), auth: { secureCookies: true } });
     const response = await request(app).post("/api/auth/register").set("Origin", origin).send({ email: "secure@example.test", password });
     const cookie = (response.headers["set-cookie"] as unknown as string[])[0]!;
     expect(cookie).toContain("__Host-lorekeeper_session="); expect(cookie).toContain("Secure"); expect(cookie).toContain("Path=/");

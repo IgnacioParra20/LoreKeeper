@@ -15,7 +15,7 @@ const universe = {
 };
 
 describe("App", () => {
-  afterEach(() => { cleanup(); resetSession(); vi.restoreAllMocks(); });
+  afterEach(() => { cleanup(); resetSession(); vi.restoreAllMocks(); window.history.replaceState({}, "", "/"); });
 
   it("carga universos y crea uno mediante la API", async () => {
     const fetchMock = vi
@@ -62,5 +62,36 @@ describe("App", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
     await screen.findByRole("button", { name: "Iniciar sesión" });
     expect(screen.queryByText(universe.name)).not.toBeInTheDocument();
+  });
+  it("opens a universe and creates and edits a character", async () => {
+    window.history.replaceState({}, "", `/universes/${universe.id}`);
+    const character = { id: "51694069-91d8-4b8f-a388-f1932e6686c1", universeId: universe.id, name: "Aria", role: "Guardiana", description: "Custodia el fuego.", createdAt: universe.createdAt, updatedAt: universe.updatedAt };
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: "user-a", email: "author@example.test", status: "ACTIVE" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { csrfToken: "csrf-a" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: universe }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: character }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { ...character, role: "Protagonista" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    render(<App />);
+    await screen.findByText("Todavía no hay personajes");
+    expect(screen.getByRole("link", { name: /Tus universos/ })).toHaveAttribute("href", "/");
+    await userEvent.click(screen.getByRole("button", { name: "Crear personaje" }));
+    await userEvent.type(screen.getByLabelText("Nombre"), "Aria");
+    await userEvent.type(screen.getByLabelText(/Rol o función/), "Guardiana");
+    await userEvent.click(screen.getByRole("button", { name: "Guardar personaje" }));
+    await screen.findByRole("heading", { name: "Aria" });
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/universes/${universe.id}/characters`, expect.objectContaining({ method: "POST" }));
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
+    await userEvent.clear(screen.getByLabelText(/Rol o función/));
+    await userEvent.type(screen.getByLabelText(/Rol o función/), "Protagonista");
+    await userEvent.click(screen.getByRole("button", { name: "Guardar personaje" }));
+    await screen.findByText("Protagonista");
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/universes/${universe.id}/characters/${character.id}`, expect.objectContaining({ method: "PATCH" }));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await userEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+    await screen.findByText("Todavía no hay personajes");
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/universes/${universe.id}/characters/${character.id}`, expect.objectContaining({ method: "DELETE" }));
   });
 });

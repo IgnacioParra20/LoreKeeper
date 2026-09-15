@@ -1,5 +1,6 @@
 import type { Universe } from "@lorekeeper/shared";
-import type { PrismaClient, Universe as PrismaUniverse } from "@prisma/client";
+import { Prisma, type PrismaClient, type Universe as PrismaUniverse } from "@prisma/client";
+import { AppError } from "../../shared/errors/app-error.js";
 
 import type {
   CreateUniverseData,
@@ -46,6 +47,18 @@ export class PrismaUniverseRepository implements UniverseRepository {
   }
 
   public async delete(id: string, ownerId: string): Promise<boolean> {
-    return (await this.prisma.universe.deleteMany({ where: { id, ownerId } })).count > 0;
+    try {
+      const removed = await this.prisma.universe.deleteMany({ where: { id, ownerId, characters: { none: {} } } });
+      if (removed.count > 0) return true;
+      if (await this.prisma.universe.findFirst({ where: { id, ownerId }, select: { id: true } })) {
+        throw new AppError(409, "UNIVERSE_HAS_CHARACTERS", "Elimina sus personajes antes de borrar el universo");
+      }
+      return false;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+        throw new AppError(409, "UNIVERSE_HAS_CHARACTERS", "Elimina sus personajes antes de borrar el universo");
+      }
+      throw error;
+    }
   }
 }

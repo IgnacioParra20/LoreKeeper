@@ -24,6 +24,16 @@ export interface Universe {
   updatedAt: string;
 }
 
+export interface Character {
+  id: string;
+  universeId: string;
+  name: string;
+  role: string | null;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiSuccess<T> {
   data: T;
 }

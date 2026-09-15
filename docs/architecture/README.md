@@ -1,6 +1,6 @@
 # Arquitectura inicial de LoreKeeper
 
-LoreKeeper comienza con una arquitectura monolítica modular dentro de un monorepo. La primera vertical implementa `Universe` de extremo a extremo y conserva límites claros para agregar las siguientes entidades sin introducir microservicios ni infraestructura prematura.
+LoreKeeper utiliza una arquitectura monolítica modular dentro de un monorepo. La primera vertical implementó `Universe` y la siguiente agregó personajes dentro de cada universo propio.
 
 ## Componentes actuales
 
@@ -15,12 +15,12 @@ LoreKeeper comienza con una arquitectura monolítica modular dentro de un monore
 
 ```text
 React
-  -> REST /api/universes
+  -> REST /api/universes y /api/universes/:id/characters
   -> autenticación de sesión y CSRF en escrituras
   -> middleware de validación Zod
-  -> UniverseController
-  -> UniverseService
-  -> UniverseRepository
+  -> UniverseController/CharacterRouter
+  -> UniverseService/CharacterService
+  -> UniverseRepository/CharacterRepository
   -> Prisma
   -> PostgreSQL
 ```
@@ -45,8 +45,8 @@ La jerarquía principal será `Universe -> Work -> Arc -> Chapter`. Las obras, a
 
 En particular, `Character` no tendrá una clave foránea directa a `Work`. La presencia y el rol se expresarán mediante `CharacterWorkParticipation` y, cuando sea necesario, `CharacterArcParticipation`. Así una ficha puede ser secundaria en una obra y protagonista en otra sin duplicarse.
 
-Después de Works y Characters, `Event` formará la cronología global y se vinculará con obras, arcos y capítulos como contexto narrativo. Reglas, canon y Continuity Engine se incorporarán sobre esos datos estructurados; no forman parte de esta primera vertical.
+Después de Works y la ampliación de Characters, `Event` formará la cronología global y se vinculará con obras, arcos y capítulos como contexto narrativo. Reglas, canon y Continuity Engine se incorporarán sobre esos datos estructurados.
 
 ## Borrado de universos
 
-El endpoint actual usa eliminación física porque todavía no existen datos dependientes. Antes de introducir obras u otras referencias históricas, la operación habitual debe migrar a archivado mediante `status = ARCHIVED`. La eliminación física deberá quedar como una acción excepcional, reforzada y con una política explícita de retención.
+El endpoint actual usa eliminación física solo cuando el universo no contiene personajes. Una clave foránea `RESTRICT` y una comprobación explícita devuelven 409 si los contiene. Más adelante, la operación habitual migrará a archivado mediante `status = ARCHIVED`.

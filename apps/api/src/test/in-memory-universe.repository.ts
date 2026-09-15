@@ -7,10 +7,13 @@ import type {
   UniverseRepository,
   UpdateUniverseData,
 } from "../modules/universes/universe.repository.js";
+import { AppError } from "../shared/errors/app-error.js";
 
 export class InMemoryUniverseRepository implements UniverseRepository {
   private readonly universes = new Map<string, Universe>();
   private readonly owners = new Map<string, string>();
+  private hasCharacters: (universeId: string) => boolean = () => false;
+  public setHasCharacters(check: (universeId: string) => boolean) { this.hasCharacters = check; }
 
   public async create(data: CreateUniverseData): Promise<Universe> {
     const now = new Date().toISOString();
@@ -49,6 +52,7 @@ export class InMemoryUniverseRepository implements UniverseRepository {
 
   public delete(id: string, ownerId: string): Promise<boolean> {
     if (this.owners.get(id) !== ownerId) return Promise.resolve(false);
+    if (this.hasCharacters(id)) throw new AppError(409, "UNIVERSE_HAS_CHARACTERS", "Elimina sus personajes antes de borrar el universo");
     this.universes.delete(id);
     this.owners.delete(id);
     return Promise.resolve(true);

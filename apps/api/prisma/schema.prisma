@@ -21,10 +21,25 @@ model Universe {
   updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
   ownerId     String         @map("owner_id") @db.Uuid
   owner       User           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  characters  Character[]
 
   @@index([status])
   @@index([ownerId, updatedAt])
   @@map("universes")
+}
+
+model Character {
+  id          String   @id @default(uuid()) @db.Uuid
+  universeId  String   @map("universe_id") @db.Uuid
+  universe    Universe @relation(fields: [universeId], references: [id], onDelete: Restrict)
+  name        String   @db.VarChar(120)
+  role        String?  @db.VarChar(120)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([universeId, updatedAt])
+  @@map("characters")
 }
 
 enum UserStatus {

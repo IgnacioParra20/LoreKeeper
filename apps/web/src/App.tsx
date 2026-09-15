@@ -8,6 +8,7 @@ import { CreateUniverseDialog } from "./components/CreateUniverseDialog";
 import { UniverseList } from "./components/UniverseList";
 import { useUniverses } from "./hooks/use-universes";
 import { AuthForm } from "./components/AuthForm";
+import { UniverseDetail } from "./components/UniverseDetail";
 import { ApiError, getCurrentUser, isAborted, logout, refreshCsrf, resetSession } from "./api/client";
 
 const UniverseScreen = () => {
@@ -105,6 +106,8 @@ export const App = () => {
     <AppHeader />
     {user ? <div className="account-bar"><span>{user.email}</span><button className="button button--secondary" onClick={() => void signOut()} disabled={leaving}>{leaving ? "Cerrando…" : "Cerrar sesión"}</button></div> : null}
     {error ? <div className="session-error" role="alert">{error} {!user ? <button className="button button--secondary" onClick={() => { setError(null); setRevision((value) => value + 1); }}>Reintentar</button> : null}</div> : null}
-    {loading ? <main className="main-content" role="status">Comprobando tu sesión…</main> : user ? <UniverseScreen key={user.id} /> : !error ? <AuthForm onAuthenticated={(value) => { setUser(value); broadcast(); }} /> : null}
+    {loading ? <main className="main-content" role="status">Comprobando tu sesión…</main> : user ? /^\/universes\/[^/]+\/?$/.test(window.location.pathname)
+      ? <UniverseDetail key={`${user.id}:${window.location.pathname}`} universeId={window.location.pathname.split("/")[2]!} />
+      : <UniverseScreen key={user.id} /> : !error ? <AuthForm onAuthenticated={(value) => { setUser(value); broadcast(); }} /> : null}
   </>;
 };

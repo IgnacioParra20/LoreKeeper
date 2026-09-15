@@ -64,6 +64,7 @@ export const UniverseList = ({
           <div className="universe-copy">
             <h2>{universe.name}</h2>
             <p>{universe.description || "Sin descripción todavía."}</p>
+            <a className="universe-open" href={`/universes/${universe.id}`}>Abrir universo <span aria-hidden="true">→</span></a>
           </div>
           <div className="universe-status">
             <span className={`status-dot status-dot--${universe.status.toLowerCase()}`} />
@@ -74,4 +75,3 @@ export const UniverseList = ({
     </div>
   );
 };
-

@@ -4,13 +4,15 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryIdentityRepository } from "./test/in-memory-identity.repository.js";
 import { createApp } from "./app.js";
 import { InMemoryUniverseRepository } from "./test/in-memory-universe.repository.js";
+import { InMemoryCharacterRepository } from "./test/in-memory-character.repository.js";
 
 describe("Universe API", () => {
   let app: ReturnType<typeof createApp>;
 
   let client: ReturnType<typeof request.agent>;
   beforeEach(async () => {
-    app = createApp({ universeRepository: new InMemoryUniverseRepository(), identityRepository: new InMemoryIdentityRepository() });
+    const universeRepository = new InMemoryUniverseRepository();
+    app = createApp({ universeRepository, characterRepository: new InMemoryCharacterRepository(universeRepository), identityRepository: new InMemoryIdentityRepository() });
     client = request.agent(app).set("Origin", "http://localhost:5173");
     const registered = await client.post("/api/auth/register").send({ email: "author@example.test", password: "A long test passphrase!" });
     client.set("X-CSRF-Token", registered.body.data.csrfToken as string);

@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
 import { PrismaIdentityRepository } from "./modules/users/prisma-identity.repository.js";
 import { PrismaUniverseRepository } from "./modules/universes/prisma-universe.repository.js";
+import { PrismaCharacterRepository } from "./modules/characters/prisma-character.repository.js";
 import { hashPassword } from "./modules/auth/password.js";
 
 const require = createRequire(import.meta.url);
@@ -56,7 +57,7 @@ describe.skipIf(!configured)("PostgreSQL real: auth, ownership and migrations", 
     }
   });
   it("persists sessions across app instances and isolates every CRUD operation", async () => {
-    const makeApp = () => createApp({ identityRepository: new PrismaIdentityRepository(prisma), universeRepository: new PrismaUniverseRepository(prisma) });
+    const makeApp = () => createApp({ identityRepository: new PrismaIdentityRepository(prisma), universeRepository: new PrismaUniverseRepository(prisma), characterRepository: new PrismaCharacterRepository(prisma) });
     const app = makeApp();
     const a = request.agent(app).set("Origin", origin);
     const b = request.agent(app).set("Origin", origin);
@@ -90,6 +91,28 @@ describe.skipIf(!configured)("PostgreSQL real: auth, ownership and migrations", 
     expect(concurrent.map((result) => result.status).sort()).toEqual([201, 409]);
     await prisma.user.update({ where: { email: "b@example.test" }, data: { status: "DISABLED" } });
     expect((await b.get("/api/auth/me")).status).toBe(401);
+  }, 30_000);
+  it("isolates persisted characters with Prisma and prevents deleting their universe", async () => {
+    const makeApp = () => createApp({ identityRepository: new PrismaIdentityRepository(prisma), universeRepository: new PrismaUniverseRepository(prisma), characterRepository: new PrismaCharacterRepository(prisma) });
+    const app = makeApp();
+    const a = request.agent(app).set("Origin", origin);
+    const b = request.agent(app).set("Origin", origin);
+    const tokenA = await a.post("/api/auth/register").send({ email: "characters-a@example.test", password });
+    const tokenB = await b.post("/api/auth/register").send({ email: "characters-b@example.test", password });
+    a.set("X-CSRF-Token", tokenA.body.data.csrfToken as string);
+    b.set("X-CSRF-Token", tokenB.body.data.csrfToken as string);
+    const worldId = (await a.post("/api/universes").send({ name: "Character world" })).body.data.id as string;
+    const base = `/api/universes/${worldId}/characters`;
+    const created = await a.post(base).send({ name: "Mara", role: "Scribe" });
+    expect(created.status).toBe(201);
+    const id = created.body.data.id as string;
+    expect((await prisma.character.findUniqueOrThrow({ where: { id } })).universeId).toBe(worldId);
+    expect((await b.get(base)).status).toBe(404);
+    expect((await b.patch(`${base}/${id}`).send({ name: "Stolen" })).status).toBe(404);
+    expect((await a.patch(`${base}/${id}`).send({ role: "Archivist" })).body.data.role).toBe("Archivist");
+    expect((await a.delete(`/api/universes/${worldId}`)).status).toBe(409);
+    expect((await a.delete(`${base}/${id}`)).status).toBe(204);
+    expect((await a.delete(`/api/universes/${worldId}`)).status).toBe(204);
   }, 30_000);
   it("preserves populated legacy universes and refuses closing ownership before assignment", async () => {
     const target = new URL(url); target.searchParams.set("schema", legacySchema);

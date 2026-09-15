@@ -18,10 +18,14 @@ import { openApiSpec } from "./openapi/spec.js";
 import type { IdentityRepository } from "./modules/users/user.repository.js";
 import { AuthService } from "./modules/auth/auth.service.js";
 import { authDefaults, createAuthHttp, guardBrowserWrites, type AuthOptions } from "./modules/auth/auth.http.js";
+import type { CharacterRepository } from "./modules/characters/character.repository.js";
+import { CharacterService } from "./modules/characters/character.service.js";
+import { createCharacterRouter } from "./modules/characters/character.routes.js";
 
 interface AppDependencies {
   universeRepository: UniverseRepository;
   identityRepository: IdentityRepository;
+  characterRepository: CharacterRepository;
   auth?: Partial<AuthOptions>;
   sessionAbsoluteMs?: number;
   sessionIdleMs?: number;
@@ -47,7 +51,9 @@ export const createApp = (dependencies: AppDependencies): Express => {
   app.get("/api/docs.json", (_request, response) => response.json(openApiSpec));
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
   app.use("/api/auth", auth.router);
-  app.use("/api/universes", auth.privateResponse, auth.authenticate, auth.csrf, createUniverseRouter(universeController));
+  const universeRouter = createUniverseRouter(universeController);
+  universeRouter.use("/:universeId/characters", createCharacterRouter(new CharacterService(dependencies.characterRepository)));
+  app.use("/api/universes", auth.privateResponse, auth.authenticate, auth.csrf, universeRouter);
 
   app.use(notFound);
   app.use(errorHandler);
