@@ -181,3 +181,4 @@ Consulta [la arquitectura](docs/architecture/README.md) para el flujo de depende
 5. Events y timeline global.
 6. Reglas, canon y excepciones.
 7. Continuity Engine determinista y explicable.
+
