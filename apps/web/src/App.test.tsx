@@ -75,13 +75,14 @@ describe("App", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { ...character, role: "Protagonista" } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     render(<App />);
-    await screen.findByText("Todavía no hay personajes");
+    await screen.findByText("Tu historia necesita una primera voz");
     expect(screen.getByRole("link", { name: /Tus universos/ })).toHaveAttribute("href", "/");
-    await userEvent.click(screen.getByRole("button", { name: "Crear personaje" }));
+    await userEvent.click(screen.getByRole("button", { name: "Crear mi primer personaje" }));
     await userEvent.type(screen.getByLabelText("Nombre"), "Aria");
     await userEvent.type(screen.getByLabelText(/Rol o función/), "Guardiana");
     await userEvent.click(screen.getByRole("button", { name: "Guardar personaje" }));
     await screen.findByRole("heading", { name: "Aria" });
+    expect(screen.getByText("1 de 3 piezas esenciales")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenLastCalledWith(`/api/universes/${universe.id}/characters`, expect.objectContaining({ method: "POST" }));
     await userEvent.click(screen.getByRole("button", { name: "Editar" }));
     await userEvent.clear(screen.getByLabelText(/Rol o función/));
@@ -91,7 +92,26 @@ describe("App", () => {
     expect(fetchMock).toHaveBeenLastCalledWith(`/api/universes/${universe.id}/characters/${character.id}`, expect.objectContaining({ method: "PATCH" }));
     vi.spyOn(window, "confirm").mockReturnValue(true);
     await userEvent.click(screen.getByRole("button", { name: "Eliminar" }));
-    await screen.findByText("Todavía no hay personajes");
+    await screen.findByText("Tu historia necesita una primera voz");
     expect(fetchMock).toHaveBeenLastCalledWith(`/api/universes/${universe.id}/characters/${character.id}`, expect.objectContaining({ method: "DELETE" }));
+  });
+
+  it("edits a universe description from its detail screen", async () => {
+    window.history.replaceState({}, "", `/universes/${universe.id}`);
+    const editedUniverse = { ...universe, description: "Una nueva descripción del mundo." };
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: "user-a", email: "author@example.test", status: "ACTIVE" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { csrfToken: "csrf-a" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: universe }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: editedUniverse }), { status: 200 }));
+    render(<App />);
+    await screen.findByRole("button", { name: "Editar descripción" });
+    await userEvent.click(screen.getByRole("button", { name: "Editar descripción" }));
+    await userEvent.clear(screen.getByLabelText("Descripción del universo"));
+    await userEvent.type(screen.getByLabelText("Descripción del universo"), editedUniverse.description);
+    await userEvent.click(screen.getByRole("button", { name: "Guardar descripción" }));
+    await screen.findByText(editedUniverse.description);
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/universes/${universe.id}`, expect.objectContaining({ method: "PATCH" }));
   });
 });

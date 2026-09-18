@@ -12,8 +12,12 @@
     "node": ">=20.19.0"
   },
   "scripts": {
+    "predev": "dotenv -- node scripts/check-dev-ports.mjs",
     "build:packages": "npm run build -w @lorekeeper/shared && npm run build -w @lorekeeper/validation",
-    "dev": "npm run prisma:generate && npm run build:packages && dotenv -- concurrently -k -n api,web -c blue,magenta \"npm run dev -w @lorekeeper/api\" \"npm run dev -w @lorekeeper/web\"",
+    "dev": "npm run prisma:generate && npm run build:packages && dotenv -- concurrently -k -n shared,validation,api,web -c cyan,yellow,blue,magenta \"npm run dev -w @lorekeeper/shared\" \"npm run dev -w @lorekeeper/validation\" \"npm run dev -w @lorekeeper/api\" \"npm run dev -w @lorekeeper/web\"",
+    "dev:docker": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build --watch",
+    "dev:docker:stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml stop web api",
+    "docker:watch": "docker compose up --build --watch",
     "build": "npm run prisma:generate && npm run build:packages && npm run build -w @lorekeeper/api && npm run build -w @lorekeeper/web",
     "test": "npm run prisma:generate && npm run build:packages && npm run test --workspaces --if-present",
     "typecheck": "npm run prisma:generate && npm run build:packages && npm run typecheck --workspaces --if-present",

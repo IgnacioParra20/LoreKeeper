@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:22-alpine AS dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -8,6 +8,15 @@ COPY packages/shared/package.json packages/shared/package.json
 COPY packages/validation/package.json packages/validation/package.json
 RUN npm ci
 
+FROM dependencies AS development
+COPY tsconfig.base.json ./
+COPY packages ./packages
+COPY apps/api ./apps/api
+RUN npm run prisma:generate && npm run build:packages
+EXPOSE 3001
+CMD ["sh", "-c", "npm run prisma:generate && npm run build:packages && npm run dev -w @lorekeeper/api"]
+
+FROM dependencies AS build
 COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api

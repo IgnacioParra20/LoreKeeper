@@ -1,5 +1,5 @@
 import type { ApiErrorResponse, ApiSuccess, AuthResult, Character, PublicUser, Universe } from "@lorekeeper/shared";
-import type { CreateCharacterInput, CreateUniverseInput, Credentials, UpdateCharacterInput } from "@lorekeeper/validation";
+import type { CreateCharacterInput, CreateUniverseInput, Credentials, UpdateCharacterInput, UpdateUniverseInput } from "@lorekeeper/validation";
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -95,6 +95,10 @@ export const createUniverse = async (input: CreateUniverseInput, signal?: AbortS
 };
 export const getUniverse = async (id: string, signal?: AbortSignal) => {
   const result = await request<ApiSuccess<Universe>>(`/api/universes/${id}`, signal ? { signal } : {});
+  return result.data;
+};
+export const updateUniverse = async (id: string, input: UpdateUniverseInput, signal?: AbortSignal) => {
+  const result = await request<ApiSuccess<Universe>>(`/api/universes/${id}`, { method: "PATCH", body: JSON.stringify(input), ...(signal ? { signal } : {}) });
   return result.data;
 };
 const charactersPath = (universeId: string) => `/api/universes/${universeId}/characters`;

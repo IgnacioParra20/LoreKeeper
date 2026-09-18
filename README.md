@@ -77,11 +77,29 @@ Desde «Tus universos», selecciona «Abrir universo» para crear, consultar, ed
 
 ## Ejecución completa con Docker
 
+### Desarrollo con actualización automática (recomendado)
+
+```bash
+npm run dev:docker
+```
+
+Requiere Docker Compose 2.32.0 o superior. Mantén esta terminal abierta: Compose Watch sincroniza React/CSS y Vite actualiza el navegador; los cambios en la API reinician su proceso. Los paquetes compartidos se sincronizan y recompilan. Los cambios en dependencias, Dockerfiles y configuración de compilación reconstruyen las imágenes automáticamente. Los archivos generados, node_modules y documentación no provocan reconstrucciones.
+
+Usa un solo modo a la vez, pues ambos publican `localhost:5173` y `localhost:3001`. Para pasar de `npm run dev` a Docker, detén la terminal local con Ctrl+C y ejecuta `npm run dev:docker`. Para volver al modo local, detén Watch, ejecuta `npm run dev:docker:stop` y después `npm run dev`. PostgreSQL y su volumen se conservan. Vite falla claramente si 5173 está ocupado; no cambia silenciosamente de puerto.
+
+Los cambios en `.env` o en los puertos/variables de Compose necesitan volver a ejecutar el comando para releer la configuración. Los cambios de esquema de base de datos requieren crear y aplicar una migración explícitamente (`npm run db:migrate`); Watch no modifica automáticamente los datos. En una base nueva ejecuta primero `npm run db:deploy` con PostgreSQL iniciado.
+
+En modo local, `npm run dev` también observa y recompila `packages/shared` y `packages/validation`, además de React y la API. Reinicia el comando después de modificar dependencias o variables de entorno.
+
+### Compilación de producción local
+
 ```bash
 docker compose up -d --build
 ```
 
 Este comando levanta PostgreSQL con volumen persistente, aplica las migraciones al iniciar la API y publica la aplicación en `http://localhost:5173`.
+
+Para reconstruir esta variante al guardar archivos, usa `npm run docker:watch`. Al finalizar cada reconstrucción, recarga el navegador. Para recarga inmediata sin reconstruir por cada edición, utiliza `npm run dev:docker`. `docker compose up -d` por sí solo no observa archivos.
 
 ```bash
 docker compose logs -f api
@@ -181,4 +199,3 @@ Consulta [la arquitectura](docs/architecture/README.md) para el flujo de depende
 5. Events y timeline global.
 6. Reglas, canon y excepciones.
 7. Continuity Engine determinista y explicable.
-

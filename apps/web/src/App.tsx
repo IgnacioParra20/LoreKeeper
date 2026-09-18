@@ -103,8 +103,7 @@ export const App = () => {
     finally { setLeaving(false); }
   };
   return <>
-    <AppHeader />
-    {user ? <div className="account-bar"><span>{user.email}</span><button className="button button--secondary" onClick={() => void signOut()} disabled={leaving}>{leaving ? "Cerrando…" : "Cerrar sesión"}</button></div> : null}
+    <AppHeader user={user} isSigningOut={leaving} onSignOut={() => void signOut()} />
     {error ? <div className="session-error" role="alert">{error} {!user ? <button className="button button--secondary" onClick={() => { setError(null); setRevision((value) => value + 1); }}>Reintentar</button> : null}</div> : null}
     {loading ? <main className="main-content" role="status">Comprobando tu sesión…</main> : user ? /^\/universes\/[^/]+\/?$/.test(window.location.pathname)
       ? <UniverseDetail key={`${user.id}:${window.location.pathname}`} universeId={window.location.pathname.split("/")[2]!} />

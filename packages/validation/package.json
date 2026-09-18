@@ -13,6 +13,7 @@
   },
   "files": ["dist"],
   "scripts": {
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run --maxWorkers=1",
     "typecheck": "tsc -p tsconfig.json --noEmit"

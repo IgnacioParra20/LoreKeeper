@@ -3,12 +3,14 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: { exclude: ["@lorekeeper/shared", "@lorekeeper/validation"] },
   server: {
     host: "0.0.0.0",
-    port: 5173,
+    port: Number(process.env.WEB_PORT ?? 5173),
+    strictPort: true,
     proxy: {
-      "/api": "http://localhost:3001",
-      "/health": "http://localhost:3001",
+      "/api": process.env.API_PROXY_TARGET ?? `http://localhost:${process.env.PORT ?? 3001}`,
+      "/health": process.env.API_PROXY_TARGET ?? `http://localhost:${process.env.PORT ?? 3001}`,
     },
   },
   test: {
@@ -17,4 +19,3 @@ export default defineConfig({
     css: true,
   },
 });
-

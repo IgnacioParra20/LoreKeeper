@@ -1,0 +1,42 @@
+# Development only: npm run dev:docker. Keep the watcher running in the terminal.
+services:
+  api:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    develop:
+      watch: !override
+        - action: sync
+          path: ./apps/api/src
+          target: /app/apps/api/src
+          initial_sync: true
+        - action: sync+restart
+          path: ./packages
+          target: /app/packages
+          initial_sync: true
+          ignore: ["**/dist/", "**/node_modules/", "**/package.json"]
+        - action: rebuild
+          path: .
+          ignore: ["apps/api/src/", "apps/web/src/", "packages/*/src/", "packages/*/dist/", "docs/", "README.md", ".github/", "**/*.test.ts", "**/*.test.tsx"]
+  web:
+    build:
+      target: development
+    environment:
+      API_PROXY_TARGET: http://api:3001
+    ports: !override
+      - "127.0.0.1:${WEB_PORT:-5173}:5173"
+    develop:
+      watch: !override
+        - action: sync
+          path: ./apps/web/src
+          target: /app/apps/web/src
+          initial_sync: true
+        - action: sync+restart
+          path: ./packages
+          target: /app/packages
+          initial_sync: true
+          ignore: ["**/dist/", "**/node_modules/", "**/package.json"]
+        - action: rebuild
+          path: .
+          ignore: ["apps/api/src/", "apps/web/src/", "packages/*/src/", "packages/*/dist/", "docs/", "README.md", ".github/", "**/*.test.ts", "**/*.test.tsx"]

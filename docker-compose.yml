@@ -22,6 +22,11 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+          ignore: ["docs/", "README.md", ".github/", "apps/web/src/", "**/*.test.ts", "**/*.test.tsx"]
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -49,6 +54,11 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+          ignore: ["docs/", "README.md", ".github/", "apps/api/src/", "**/*.test.ts", "**/*.test.tsx"]
     restart: unless-stopped
     depends_on:
       api:

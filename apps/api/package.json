@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --include \"../../packages/shared/dist/**\" --include \"../../packages/validation/dist/**\" src/server.ts",
     "start": "node dist/server.js",
     "test": "vitest run --maxWorkers=1 --exclude src/auth.postgres.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
